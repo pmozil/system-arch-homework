@@ -1,5 +1,5 @@
 ## Link to github
-[https://github.com/pmozil/system-arch-homework/blob/micro_basics](https://github.com/pmozil/system-arch-homework/blob/micro_basics)
+[https://github.com/pmozil/system-arch-homework/tree/micro_basics](https://github.com/pmozil/system-arch-homework/tree/micro_basics)
 
 
 ## Architecture
