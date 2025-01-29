@@ -56,16 +56,13 @@ Start each service in a separate terminal:
 
 ```bash
 # Terminal 1 - Start logging-service
-cd logging-service
-cargo run
+cargo run --bin facade-service
 
 # Terminal 2 - Start facade-service
-cd facade-service
-cargo run
+cargo run --bin logging-service
 
 # Terminal 3 - Start messages-service
-cd messages-service
-cargo run
+cargo run --bin messages-service
 ```
 
 Service addresses:
