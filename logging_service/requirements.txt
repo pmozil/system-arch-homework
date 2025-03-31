@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+kafka-python
+hazelcast-python-client
+requests
+
