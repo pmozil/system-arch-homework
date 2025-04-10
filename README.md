@@ -1,4 +1,4 @@
-# Systems arch homework 3: Microservices with hazelcast
+# Systems arch homework 5: Microservices with kafka
 
 ## Setup
 
