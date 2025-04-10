@@ -146,14 +146,6 @@ services:
     expose:
       - "8000"
 
-  # Config server
-  config_server:
-    build:
-      context: ./config_server
-    container_name: config_server
-    networks:
-      - kafka-net
-
   # Facade Service
   facade-service:
     build:
@@ -169,11 +161,10 @@ services:
       - logging_service_3
       - message-service-1
       - message-service-2
-      - config_server
     networks:
       - kafka-net
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
 networks:
   kafka-net:

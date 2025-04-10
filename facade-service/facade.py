@@ -63,26 +63,19 @@ def shutdown_event():
 
 
 def get_service_url(service_name: str):
-    """Retrieve a random instance URL of the specified service from the config server."""
     try:
-        response = requests.get(f"{CONFIG_SERVER_URL}/{service_name}")
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to fetch {service_name} instances from config server",
-            )
-        instances = [ServiceInstance(**inst) for inst in response.json()]
-        if not instances:
-            raise HTTPException(
-                status_code=500,
-                detail=f"No available instances for service: {service_name}",
-            )
-        instance = random.choice(instances)
-        return f"http://{instance.ip}:{instance.port}"
-    except requests.RequestException as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error communicating with config server: {str(e)}"
+        res = requests.get(
+            f"http://consul:8500/v1/health/service/{service_name}?passing=true"
         )
+        services = res.json()
+        if not services:
+            raise HTTPException(
+                status_code=500, detail=f"No healthy instances of {service_name}"
+            )
+        instance = random.choice(services)["Service"]
+        return f"http://{instance['Address']}:{instance['Port']}"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Consul error: {str(e)}")
 
 
 def send_to_kafka_async(topic, message):
