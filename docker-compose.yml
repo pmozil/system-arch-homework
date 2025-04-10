@@ -1,6 +1,16 @@
 version: "3.8"
 
 services:
+  # Consul
+  consul:
+    image: consul:1.15.4
+    container_name: consul
+    ports:
+      - "8500:8500"
+    command: "consul agent -dev -client=0.0.0.0"
+    networks:
+      - kafka-net
+
   # Controllers
   controller-1:
     image: apache/kafka:latest
@@ -67,9 +77,12 @@ services:
       KAFKA_BROKER_URL: "broker-1:19092"
       KAFKA_TOPIC: "messages"
     depends_on:
+      - consul
       - broker-1
     networks:
       - kafka-net
+    expose:
+      - "8000"
 
   message-service-2:
     build:
@@ -79,9 +92,12 @@ services:
       KAFKA_BROKER_URL: "broker-1:19092"
       KAFKA_TOPIC: "messages"
     depends_on:
+      - consul
       - broker-1
     networks:
       - kafka-net
+    expose:
+      - "8000"
 
   # Hazelcast Service
   hazelcast:
@@ -99,25 +115,36 @@ services:
       context: ./logging_service
     container_name: logging_service_1
     depends_on:
+      - consul
       - hazelcast
+    networks:
+      - kafka-net
+    expose:
+      - "8000"
 
   logging_service_2:
     build:
       context: ./logging_service
     container_name: logging_service_2
     depends_on:
+      - consul
       - hazelcast
     networks:
       - kafka-net
+    expose:
+      - "8000"
 
   logging_service_3:
     build:
       context: ./logging_service
     container_name: logging_service_3
     depends_on:
+      - consul
       - hazelcast
     networks:
       - kafka-net
+    expose:
+      - "8000"
 
   # Config server
   config_server:
@@ -136,6 +163,7 @@ services:
       KAFKA_BROKER_URL: "broker-1:19092"
       KAFKA_TOPIC: "messages"
     depends_on:
+      - consul
       - logging_service_1
       - logging_service_2
       - logging_service_3
@@ -144,8 +172,8 @@ services:
       - config_server
     networks:
       - kafka-net
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
 
 networks:
   kafka-net:

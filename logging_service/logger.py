@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import socket
+import uuid
 import hazelcast
 import requests
 import socket
@@ -10,18 +12,22 @@ from pydantic import BaseModel
 from typing import List
 import os
 
+
 # Message model
 class MessageRequest(BaseModel):
     id: str
     msg: str
 
+
 class ServiceInstance(BaseModel):
     ip: str
     port: int
 
+
 class ServiceRegistration(BaseModel):
     service_name: str
     instances: List[ServiceInstance]
+
 
 app = FastAPI(title="Logging Service")
 
@@ -32,25 +38,31 @@ PORT = 8000
 hz_client = hazelcast.HazelcastClient(cluster_members=["hazelcast:5701"])
 messages_map = hz_client.get_map("messages").blocking()
 
+
 @app.on_event("startup")
 async def startup_event():
     """Registers this logging service instance with the config server on startup."""
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    if ip_address.startswith("127."):
-        ip_address = "localhost"
-    try:
-        registration = ServiceRegistration(
-            service_name="logging",
-            instances=[ServiceInstance(ip=ip_address, port=PORT)]
-        )
-        response = requests.post(f"{CONFIG_SERVER_URL}/services", json=registration.dict())
-        if response.status_code == 200:
-            print(f"Successfully registered with config server: {ip_address}:{PORT}")
-        else:
-            print(f"Failed to register with config server: {response.text}")
-    except requests.RequestException as e:
-        print(f"Error connecting to config server: {str(e)}")
+    name = "logging"
+    port = PORT
+    ip = socket.gethostbyname(socket.gethostname())
+    sid = f"{name}-{str(uuid.uuid4())[:8]}"
+
+    requests.put(
+        "http://consul:8500/v1/agent/service/register",
+        json={
+            "ID": sid,
+            "Name": name,
+            "Address": ip,
+            "Port": port,
+            "Check": {"HTTP": f"http://{ip}:{port}/health", "Interval": "10s"},
+        },
+    )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 @app.post("/messages")
 async def log_message(message: MessageRequest):
@@ -62,6 +74,7 @@ async def log_message(message: MessageRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to log message: {str(e)}")
 
+
 @app.get("/messages")
 async def get_messages():
     """Retrieves all stored messages from Hazelcast."""
@@ -70,13 +83,16 @@ async def get_messages():
         messages = {entry[0]: entry[1] for entry in all_entries}
         return messages if messages else {"message": "No messages found"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve messages: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve messages: {str(e)}"
+        )
+
 
 @app.on_event("shutdown")
 def shutdown_event():
     """Shuts down the Hazelcast client when the service stops."""
     hz_client.shutdown()
 
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)
-
